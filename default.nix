@@ -1,5 +1,8 @@
-# FIXME text bbox positions are wrong in the PDF file
-# all bboxes are packed in the top-left corner
+# FIXME joined lines, and shifted following lines
+# https://github.com/ahnafnafee/local-llm-pdf-ocr/issues/2
+# possible solution: downgrade to opencv 4.11.0
+# https://lazamar.co.uk/nix-versions/?package=opencv&version=4.11.0&fullName=opencv-4.11.0&keyName=opencv&revision=e6f23dc08d3624daab7094b701aa3954923c6bbb&channel=nixpkgs-unstable#instructions
+# nix-shell -p opencv -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/e6f23dc08d3624daab7094b701aa3954923c6bbb.tar.gz
 
 # TODO dont depend on local LLM server
 # also offer a standalone tool like
@@ -15,57 +18,24 @@
 
 python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "local-llm-pdf-ocr";
-  version = "0-unstable-2026-04-28-b160c4a";
+  version = "0-unstable-2026-04-29-03a4dfd";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ahnafnafee";
     repo = "local-llm-pdf-ocr";
     # https://github.com/ahnafnafee/local-llm-pdf-ocr/pull/5
-    rev = "676202cc627e3f45050236f138230c34b78465f2";
-    hash = "sha256-klMcv9L5FF8hWYni//341sDZdzd1hzCaIkCw3uXSQ6w=";
+    rev = "03a4dfd414bf2afec0f1eafa1ea6ff441d7daf7a";
+    hash = "sha256-9rPaJyLxdb1ZQ9uRFkXF1JNtnpe78nBEqQDi+bE1Gz8=";
   };
 
   postPatch = ''
     # unpin dependencies
     sed -i -E 's/>=.*",$/",/' pyproject.toml
-
-    # fix: ModuleNotFoundError: No module named 'src'
-    grep -r -l -F " src.pdf_ocr" . |
-    grep '\.py$' |
-    xargs sed -i 's/ src\.pdf_ocr/ pdf_ocr/'
-
-    # move scripts to package
-    mv -t src/pdf_ocr main.py server.py static scripts tests
-
-    # add main script
-    # install server assets
-    cat >>pyproject.toml <<EOF
-    [project.scripts]
-    local-llm-pdf-ocr = "pdf_ocr.main:main"
-
-    [tool.setuptools]
-    include-package-data = true
-
-    [tool.setuptools.package-data]
-    pdf_ocr = ["static/*"]
-    EOF
-
-    # fix: print errors
-    substituteInPlace src/pdf_ocr/main.py \
-      --replace \
-        "    except Exception:" \
-        "$(
-          echo "    except Exception as exc:"
-          echo "        raise"
-        )"
-
-    sed -i '/^import pillow_avif.*/d' src/pdf_ocr/core/pdf.py
-    sed -i '/.*pillow-avif-plugin.*/d' pyproject.toml
   '';
 
   build-system = [
-    python3.pkgs.setuptools
+    python3.pkgs.hatchling
   ];
 
   dependencies = with python3.pkgs; [
@@ -73,8 +43,6 @@ python3.pkgs.buildPythonApplication (finalAttrs: {
     openai
     opencv-python-headless
     pillow
-    # error: 'pillow-avif-plugin' has been removed because 'pillow' has native avif support since 11.3
-    # pillow-avif-plugin
     pymupdf
     python-dotenv
     python-multipart
@@ -95,7 +63,7 @@ python3.pkgs.buildPythonApplication (finalAttrs: {
   dontUsePytestCheck = true;
 
   meta = {
-    description = "Convert scanned PDFs into searchable text locally using Vision LLMs (olmOCR). 100% private, offline, and free. Features a modern Web UI & CLI";
+    description = "Convert scanned PDFs into searchable text locally using Vision LLMs (olmOCR)";
     homepage = "https://github.com/ahnafnafee/local-llm-pdf-ocr";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ ];
