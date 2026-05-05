@@ -1,5 +1,9 @@
 #!/bin/sh
 
-local-llm-pdf-ocr 2026-04-10.10-00.avif 2026-04-10.10-00.avif.default.pdf
+src=2026-04-10.10-00.avif
 
-local-llm-pdf-ocr --grounded 2026-04-10.10-00.avif 2026-04-10.10-00.avif.grounded.pdf
+for model in allenai_olmocr-2-7b-1025 qwen3-vl-8b-instruct; do
+  read -p "load the '$model' model in lm-studio and hit enter to run local-llm-pdf-ocr"
+  local-llm-pdf-ocr $src $src.default.$model.pdf "$@"
+  local-llm-pdf-ocr $src $src.grounded.$model.pdf --grounded "$@"
+done
